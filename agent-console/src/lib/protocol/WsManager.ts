@@ -29,7 +29,6 @@ export class WsManager {
   private static readonly WS_URL = 'ws://localhost:4747/ws'
   // Heartbeat: server sends PING every 12s; we check every 3s that we haven't
   // missed responding.  We track the last challenge we need to echo.
-  private pendingChallenge: string | null = null
 
   // Callbacks wired up by useWebSocket
   onMessage: (msg: ServerMessage) => void = () => {}
@@ -155,9 +154,7 @@ export class WsManager {
 
   private handlePing(challenge: string): void {
     // Always PONG — even if challenge is empty (corrupt heartbeat in chaos mode)
-    this.pendingChallenge = challenge
     this.send({ type: 'PONG', echo: challenge })
-    this.pendingChallenge = null
   }
 
   // The server sends a PING every 12s and terminates after 3 missed PONGs.
@@ -174,7 +171,6 @@ export class WsManager {
       clearInterval(this.pingTimer)
       this.pingTimer = null
     }
-    this.pendingChallenge = null
   }
 
   private clearReconnectTimer(): void {
