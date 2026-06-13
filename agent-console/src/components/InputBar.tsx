@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useRef, type KeyboardEvent } from 'react'
-import { useWebSocket } from '@/hooks/useWebSocket'
 import { useConnectionStore } from '@/lib/stores/connectionStore'
 
-export function InputBar() {
+interface Props {
+  sendMessage: (content: string) => void
+}
+
+export function InputBar({ sendMessage }: Props) {
   const [value, setValue] = useState('')
-  const { sendMessage } = useWebSocket()
   const status = useConnectionStore((s) => s.status)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 

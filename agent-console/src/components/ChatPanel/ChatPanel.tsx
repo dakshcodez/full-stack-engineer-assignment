@@ -3,8 +3,13 @@
 import { useEffect, useRef } from 'react'
 import { useChatStore } from '@/lib/stores/chatStore'
 import { MessageBubble } from './MessageBubble'
+import type { ClientMessage } from '@/lib/protocol/types'
 
-export function ChatPanel() {
+interface Props {
+  sendRaw: (msg: ClientMessage) => void
+}
+
+export function ChatPanel({ sendRaw }: Props) {
   const messages = useChatStore((s) => s.messages)
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -21,7 +26,7 @@ export function ChatPanel() {
         </div>
       )}
       {messages.map((msg) => (
-        <MessageBubble key={msg.id} message={msg} />
+        <MessageBubble key={msg.id} message={msg} sendRaw={sendRaw} />
       ))}
       <div ref={bottomRef} />
     </div>

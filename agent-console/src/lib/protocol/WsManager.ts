@@ -81,19 +81,25 @@ export class WsManager {
 
   // ── Private ───────────────────────────────────────────────
 
+  getStatus(): ConnectionStatus {
+    return this.status
+  }
+
   private openSocket(): void {
     const ws = new WebSocket(WsManager.WS_URL)
     this.ws = ws
 
-    ws.onopen = () => this.handleOpen()
+    ws.onopen = () => this.handleOpen(ws)
     ws.onmessage = (event) => this.handleRawMessage(event.data as string)
-    ws.onclose = () => this.handleClose()
+    ws.onclose = () => this.handleClose(ws)
     ws.onerror = () => {
       // onclose always fires after onerror; handle there
     }
   }
 
-  private handleOpen(): void {
+  private handleOpen(ws: WebSocket): void {
+    // Guard against stale sockets firing after we've moved on
+    if (ws !== this.ws) return
     this.reconnectAttempts = 0
     this.clearReconnectTimer()
 
@@ -131,7 +137,9 @@ export class WsManager {
     for (const m of ready) this.onMessage(m)
   }
 
-  private handleClose(): void {
+  private handleClose(ws: WebSocket): void {
+    // Ignore events from stale sockets that have already been superseded
+    if (ws !== this.ws) return
     this.stopPingTimer()
     this.ws = null
     if (this.intentionalClose) return

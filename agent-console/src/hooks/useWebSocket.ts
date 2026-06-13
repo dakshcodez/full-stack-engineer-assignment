@@ -8,12 +8,24 @@ import { useChatStore } from '@/lib/stores/chatStore'
 import { useTimelineStore } from '@/lib/stores/timelineStore'
 import { useContextStore } from '@/lib/stores/contextStore'
 
-// Singleton manager — persists across renders. Created once per app mount.
-let _manager: WsManager | null = null
+// Attach the singleton to window so it survives HMR module reloads in dev.
+// In production builds there is no HMR, so a plain module-level var is fine —
+// but using window is safe in both environments.
+declare global {
+  interface Window {
+    __agentWsManager?: WsManager
+  }
+}
 
-function getManager(): WsManager {
-  if (!_manager) _manager = new WsManager()
-  return _manager
+function getOrCreateManager(): WsManager {
+  if (typeof window === 'undefined') {
+    // SSR — return a no-op instance; it will never be used (effects don't run server-side)
+    return new WsManager()
+  }
+  if (!window.__agentWsManager) {
+    window.__agentWsManager = new WsManager()
+  }
+  return window.__agentWsManager
 }
 
 // Routes an ordered ServerMessage to the correct stores.
@@ -22,7 +34,6 @@ function routeMessage(msg: ServerMessage): void {
   const timeline = useTimelineStore.getState()
   const context = useContextStore.getState()
 
-  // Always add to timeline
   timeline.addEvent(msg)
 
   switch (msg.type) {
@@ -43,43 +54,49 @@ function routeMessage(msg: ServerMessage): void {
       break
     case 'PING':
     case 'ERROR':
-      // Handled by WsManager (PING) or shown in timeline (ERROR); no chat action
       break
   }
 }
 
 export function useWebSocket() {
-  const managerRef = useRef<WsManager>(getManager())
+  const managerRef = useRef<WsManager | null>(null)
 
   useEffect(() => {
-    const mgr = managerRef.current
+    const mgr = getOrCreateManager()
+    managerRef.current = mgr
 
     mgr.onStatusChange = (status) => {
-      const conn = useConnectionStore.getState()
-      conn.setStatus(status)
+      useConnectionStore.getState().setStatus(status)
     }
-
     mgr.onMessage = routeMessage
+
+    // Immediately push the current status — the callback may have been detached
+    // during a StrictMode/HMR cleanup cycle while the socket stayed open, so the
+    // store might be stale even though the manager is already 'connected'.
+    useConnectionStore.getState().setStatus(mgr.getStatus())
 
     mgr.connect()
 
     return () => {
-      // Don't destroy on unmount — StrictMode double-mounts would cause issues.
-      // The manager is a singleton; disconnect is called only on explicit teardown.
+      // Detach callbacks but keep the connection alive across HMR remounts.
+      // The window-persisted singleton stays connected; only a full page reload
+      // or explicit disconnect() call will tear it down.
+      mgr.onMessage = () => {}
+      mgr.onStatusChange = () => {}
     }
   }, [])
 
   const sendMessage = (content: string) => {
     const mgr = managerRef.current
-    // Reset buffer seq tracking for the new conversation turn
-    // (server resets seq to 1 on each USER_MESSAGE)
+    if (!mgr) return
+    // Server resets seq to 1 on each USER_MESSAGE — reset our buffer to match.
     mgr.resetBuffer()
     useChatStore.getState().addUserMessage(content)
     mgr.send({ type: 'USER_MESSAGE', content })
   }
 
   const sendRaw = (msg: ClientMessage) => {
-    managerRef.current.send(msg)
+    managerRef.current?.send(msg)
   }
 
   return { sendMessage, sendRaw }

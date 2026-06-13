@@ -8,8 +8,8 @@ import { ConnectionStatus } from '@/components/ConnectionStatus'
 import { InputBar } from '@/components/InputBar'
 
 export default function Home() {
-  // Mount the WebSocket connection for the entire app
-  useWebSocket()
+  // Single hook mount — callbacks only ever attached once
+  const { sendMessage, sendRaw } = useWebSocket()
 
   return (
     <div className="flex h-screen flex-col bg-zinc-950 text-zinc-100">
@@ -20,9 +20,9 @@ export default function Home() {
         {/* Chat — takes remaining space */}
         <div className="flex flex-1 flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto">
-            <ChatPanel />
+            <ChatPanel sendRaw={sendRaw} />
           </div>
-          <InputBar />
+          <InputBar sendMessage={sendMessage} />
         </div>
 
         {/* Timeline — fixed width, scrollable */}

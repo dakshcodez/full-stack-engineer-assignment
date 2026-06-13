@@ -2,17 +2,17 @@
 
 import { memo } from 'react'
 import type { ChatMessage, AssistantMessage } from '@/lib/stores/chatStore'
+import type { ClientMessage } from '@/lib/protocol/types'
 import { ToolCallCard } from './ToolCallCard'
-import { useWebSocket } from '@/hooks/useWebSocket'
 import { useChatStore } from '@/lib/stores/chatStore'
 import { useTimelineStore } from '@/lib/stores/timelineStore'
 
 interface Props {
   message: ChatMessage
+  sendRaw: (msg: ClientMessage) => void
 }
 
-export const MessageBubble = memo(function MessageBubble({ message }: Props) {
-  const { sendRaw } = useWebSocket()
+export const MessageBubble = memo(function MessageBubble({ message, sendRaw }: Props) {
   const selectedSegmentId = useChatStore((s) => s.selectedSegmentId)
   const setSelectedSegment = useChatStore((s) => s.setSelectedSegment)
   const setSelectedEvent = useTimelineStore((s) => s.setSelectedEvent)
