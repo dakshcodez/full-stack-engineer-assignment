@@ -30,6 +30,7 @@ export type StreamStatus = 'streaming' | 'paused' | 'complete'
 
 export interface AssistantMessage {
   id: string
+  role: 'assistant'
   streamId: string
   segments: Segment[]
   streamStatus: StreamStatus
@@ -86,6 +87,7 @@ export const useChatStore = create<ChatState & ChatActions>((set) => ({
         // New stream — create assistant message
         const newMsg: AssistantMessage = {
           id: crypto.randomUUID(),
+          role: 'assistant',
           streamId: msg.stream_id,
           segments: [{ kind: 'tokens', text: msg.text }],
           streamStatus: 'streaming',
@@ -126,6 +128,7 @@ export const useChatStore = create<ChatState & ChatActions>((set) => ({
         // Tool call before any tokens (lookup script)
         const newMsg: AssistantMessage = {
           id: crypto.randomUUID(),
+          role: 'assistant',
           streamId: msg.stream_id,
           segments: [],
           streamStatus: 'paused',
