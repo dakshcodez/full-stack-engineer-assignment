@@ -53,22 +53,26 @@ export function TimelinePanel() {
     overscan: 10,
   })
 
-  // Auto-scroll to bottom when new events arrive (only if already at bottom)
+  // Auto-scroll to bottom when new events arrive (only if pinned to bottom).
+  // Use 'auto' (instant) not 'smooth' — smooth at 30+ events/s creates
+  // constant jitter as each animation interrupts the previous one.
   const isAtBottomRef = useRef(true)
   useEffect(() => {
     if (isAtBottomRef.current && filtered.length > 0) {
-      virtualizer.scrollToIndex(filtered.length - 1, { behavior: 'smooth' })
+      virtualizer.scrollToIndex(filtered.length - 1, { behavior: 'auto' })
     }
-  }, [filtered.length, virtualizer])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtered.length])
 
-  // Scroll to selected event (bidirectional: triggered by chat panel clicks)
+  // Jump to selected event — smooth is fine here (infrequent, user-triggered)
   useEffect(() => {
     if (!selectedEventId) return
     const idx = filtered.findIndex((e) => e.id === selectedEventId)
     if (idx !== -1) {
       virtualizer.scrollToIndex(idx, { behavior: 'smooth' })
     }
-  }, [selectedEventId, filtered, virtualizer])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedEventId])
 
   const handleRowClick = useCallback(
     (event: TimelineEvent) => {
@@ -111,8 +115,10 @@ export function TimelinePanel() {
         className="flex-1 overflow-y-auto"
         onScroll={(e) => {
           const el = e.currentTarget
+          // 40px threshold: tight enough that a deliberate scroll-up unpins,
+          // but not so tight that sub-pixel rounding causes false negatives.
           isAtBottomRef.current =
-            el.scrollHeight - el.scrollTop - el.clientHeight < 60
+            el.scrollHeight - el.scrollTop - el.clientHeight < 40
         }}
       >
         {filtered.length === 0 ? (
