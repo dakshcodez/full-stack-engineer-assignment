@@ -126,6 +126,19 @@ After the `lookup_metric` result, the agent sends a second `ctx_report` snapshot
 
 ![Context diff](public/screenshots/04-context-diff.png)
 
+## Chaos Mode Demo
+
+Recorded against `--mode chaos`. Shows: streaming with TOKEN batching, mid-stream TOOL_CALL interruption, **chaos latency spike** (tool card stuck "waiting for result…" for ~20s while chaos injects delay), TOOL_RESULT finally arriving and streaming resuming, second `ctx_report` context snapshot in the inspector, PING heartbeat events in the timeline, and the large database-schema context snapshot loading without UI freeze.
+
+![Chaos mode demo](public/chaos-demo.gif)
+
+**What to look for in the GIF:**
+- `lookup_metric` tool card appears mid-sentence — stream freezes cleanly, no layout shift
+- Card stays in "waiting for result…" for an extended time (chaos latency spike: 2–8s)
+- When result arrives, card updates and streaming resumes from the exact token boundary
+- Timeline accumulates TOKEN batches, TOOL_CALL, TOOL_RESULT, CONTEXT_SNAPSHOT, and PING rows simultaneously
+- Context Inspector shows `ctx_session` and `ctx_report` tabs; second snapshot diff highlighted in green
+
 ## Project Structure
 
 ```
